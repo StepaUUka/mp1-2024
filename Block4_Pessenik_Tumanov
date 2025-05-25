@@ -1,0 +1,288 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <ctime>
+#include <locale.h>
+
+using namespace std;
+
+// Базовый класс - информация о песне
+class Song {
+protected:
+    string title;
+    string poet;
+    string composer;
+    string performer;
+    string album;
+    struct {
+        int day;
+        int month;
+        int year;
+    } releaseDate;
+
+public:
+    // Конструктор
+    Song(const string& title, const string& poet, const string& composer,
+        const string& performer, const string& album, int day, int month, int year)
+        : title(title), poet(poet), composer(composer), performer(performer), album(album) {
+        releaseDate.day = day;
+        releaseDate.month = month;
+        releaseDate.year = year;
+    }
+
+    // Конструктор по умолчанию
+    Song() : title(""), poet(""), composer(""), performer(""), album("") {
+        releaseDate.day = 1;
+        releaseDate.month = 1;
+        releaseDate.year = 1900;
+    }
+
+    // Геттеры
+    string getTitle() const { return title; }
+    string getPoet() const { return poet; }
+    string getComposer() const { return composer; }
+    string getPerformer() const { return performer; }
+    string getAlbum() const { return album; }
+    string getReleaseDate() const {
+        return to_string(releaseDate.day) + "." +
+            to_string(releaseDate.month) + "." +
+            to_string(releaseDate.year);
+    }
+
+    // Сеттеры
+    void setTitle(const string& t) { title = t; }
+    void setPoet(const string& p) { poet = p; }
+    void setComposer(const string& c) { composer = c; }
+    void setPerformer(const string& p) { performer = p; }
+    void setAlbum(const string& a) { album = a; }
+    void setReleaseDate(int d, int m, int y) {
+        releaseDate.day = d;
+        releaseDate.month = m;
+        releaseDate.year = y;
+    }
+
+    // Вывод информации о песне
+    virtual void printInfo() const {
+        cout << "Название: " << title << "\n"
+            << "Поэт: " << poet << "\n"
+            << "Композитор: " << composer << "\n"
+            << "Исполнитель: " << performer << "\n"
+            << "Альбом: " << (album.empty() ? "нет" : album) << "\n"
+            << "Дата выпуска: " << getReleaseDate() << "\n";
+    }
+
+    // Оператор сравнения для сортировки по названию
+    bool operator<(const Song& other) const {
+        return title < other.title;
+    }
+
+    // Оператор равенства для поиска
+    bool operator==(const Song& other) const {
+        return title == other.title && performer == other.performer;
+    }
+};
+
+// Производный класс - песенник
+class SongBook : public Song {
+private:
+    vector<Song> songs;
+public:
+    // Добавить песню
+    void addSong(const Song& song) {
+        songs.push_back(song);
+        sort(songs.begin(), songs.end());
+    }
+
+    // Изменить данные песни
+    bool modifySong(const string& title, const string& performer, const Song& newData) {
+        auto it = findSong(title, performer);
+        if (it != songs.end()) {
+            *it = newData;
+            sort(songs.begin(), songs.end());
+            return true;
+        }
+        return false;
+    }
+
+    // Найти песню по названию и исполнителю
+    vector<Song>::iterator findSong(const string& title, const string& performer) {
+        Song temp(title, "", "", performer, "", 1, 1, 1900);
+        return find(songs.begin(), songs.end(), temp);
+    }
+
+    // Получить все песни поэта
+    vector<Song> getSongsByPoet(const string& poet) const {
+        vector<Song> result;
+        for (const auto& song : songs) {
+            if (song.getPoet() == poet) {
+                result.push_back(song);
+            }
+        }
+        return result;
+    }
+
+    // Получить все песни композитора
+    vector<Song> getSongsByComposer(const string& composer) const {
+        vector<Song> result;
+        for (const auto& song : songs) {
+            if (song.getComposer() == composer) {
+                result.push_back(song);
+            }
+        }
+        return result;
+    }
+
+    // Получить все песни исполнителя
+    vector<Song> getSongsByPerformer(const string& performer) const {
+        vector<Song> result;
+        for (const auto& song : songs) {
+            if (song.getPerformer() == performer) {
+                result.push_back(song);
+            }
+        }
+        return result;
+    }
+
+    // Текущее количество песен
+    size_t getSongCount() const {
+        return songs.size();
+    }
+
+    //Функция возврата песни
+    const vector<Song>& getSongs() const { return songs; }
+
+    // Удалить песню
+    bool removeSong(const string& title, const string& performer) {
+        auto it = findSong(title, performer);
+        if (it != songs.end()) {
+            songs.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+    // Сохранить в файл
+    bool saveToFile(const string& filename) const {
+        ofstream out(filename);
+        if (!out) return false;
+
+        for (const auto& song : songs) {
+            out << song.getTitle() << "\n"
+                << song.getPoet() << "\n"
+                << song.getComposer() << "\n"
+                << song.getPerformer() << "\n"
+                << song.getAlbum() << "\n"
+                << song.getReleaseDate() << "\n";
+        }
+        return true;
+    }
+
+    // Загрузить из файла
+    bool loadFromFile(const string& filename) {
+        ifstream in(filename);
+        if (!in) return false;
+
+        songs.clear();
+        string line;
+        while (getline(in, line)) {
+            string title = line;
+            getline(in, line); string poet = line;
+            getline(in, line); string composer = line;
+            getline(in, line); string performer = line;
+            getline(in, line); string album = line;
+            getline(in, line); string date = line;
+
+            // Парсинг даты
+            size_t dot1 = date.find('.');
+            size_t dot2 = date.rfind('.');
+            int day = stoi(date.substr(0, dot1));
+            int month = stoi(date.substr(dot1 + 1, dot2 - dot1 - 1));
+            int year = stoi(date.substr(dot2 + 1));
+
+            songs.emplace_back(title, poet, composer, performer, album, day, month, year);
+        }
+        sort(songs.begin(), songs.end());
+        return true;
+    }
+
+    // Вывести все песни (переопределенный метод)
+    void printInfo() const override {
+        cout << "Песенник содержит " << songs.size() << " песен:\n";
+        int i = 1;
+        for (const auto& song : songs) {
+            cout << "Песня номер " << i << endl;
+            song.printInfo();
+            cout << "\n";
+            i += 1;
+        }
+    }
+};
+
+// Пример использования
+int main() {
+    setlocale(LC_ALL, "Russian");
+
+    //Пункт 1 (Добавление песен)
+    SongBook mySongBook;
+    mySongBook.addSong(Song("Yesterday", "Леннон/Маккартни", "Леннон/Маккартни",
+        "The Beatles", "Help!", 6, 8, 1965));
+    mySongBook.addSong(Song("Bohemian Rhapsody", "Фредди Меркьюри", "Фредди Меркьюри",
+        "Queen", "A Night at the Opera", 31, 10, 1975));
+    mySongBook.addSong(Song("Imagine", "Джон Леннон", "Джон Леннон",
+        "John Lennon", "Imagine", 11, 10, 1971));
+    mySongBook.printInfo();
+
+    //Пункт 2 (Изменить данные выбранной песни) и Пункт 3 (Найти песню по названию и исполнителю)
+    auto it = mySongBook.findSong("Yesterday", "The Beatles");
+    if (it != mySongBook.getSongs().end()) {
+        Song newData = *it;
+        newData.setAlbum("Help! (Remastered)");
+        mySongBook.modifySong("Yesterday", "The Beatles", newData);
+    }
+    mySongBook.printInfo();
+
+    //Пункт 4 (Выдать все песни заданного поэта)
+    // Вывод всех песен Джона Леннона
+    cout << "Песни Джона Леннона:\n";
+    auto LenonSongs = mySongBook.getSongsByPoet("Джон Леннон");
+    for (const auto& song : LenonSongs) {
+        song.printInfo();
+        cout << "\n";
+    }
+
+    //Пункт 5 (Выдать все песни заданного композитора)
+    // Вывод всех песен Фреди Меркьюри
+    cout << "Песни Фредди Меркьюри:\n";
+    auto FrediSongs = mySongBook.getSongsByComposer("Фредди Меркьюри");
+    for (const auto& song : FrediSongs) {
+        song.printInfo();
+        cout << "\n";
+    }
+
+    //Пункт 6 (Выдать все песни заданного исполнителя)
+    // Вывод всех песен Queen
+    cout << "Песни Queen:\n";
+    auto QueenSongs = mySongBook.getSongsByPerformer("Queen");
+    for (const auto& song : QueenSongs) {
+        song.printInfo();
+        cout << "\n";
+    }
+
+    //Пункт 7 (Узнать текущее число песен)
+    cout << "Тукущее количество песен: " << mySongBook.getSongCount() << endl;
+    cout << "\n";
+
+    //Пункт 8 (Удалить песню)
+    //Удаляем песню Yesterday исполнителя The Beatles
+    mySongBook.removeSong("Yesterday", "The Beatles");
+    mySongBook.printInfo();
+
+    //Пункт 9 (Сохранить песенник в файл)
+    mySongBook.saveToFile("songbook.txt");
+    SongBook loadedSongBook;
+    loadedSongBook.loadFromFile("songbook.txt");
+
+}
