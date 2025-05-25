@@ -1,0 +1,319 @@
+#include <iostream>
+#include <iomanip>
+#include <locale.h>
+#include <vector>
+using namespace std;
+
+//Шаблонный класс Matrix
+template <typename T>
+class Matrix {
+private:
+    int lines;
+    int columns;
+    T** A; 
+
+public:
+    // Конструкторы
+    // Конструктор по умолчанию
+    Matrix() : lines(0), columns(0), A(nullptr) {}
+
+    // Конструктор инициализации
+    Matrix(int l, int c) : lines(l), columns(c) {
+        A = new T* [lines];
+        for (int i = 0; i < lines; ++i) {
+            A[i] = new T[columns];
+            for (int j = 0; j < columns; ++j) {
+                A[i][j] = 0;
+            }
+        }
+    }
+
+    // Конструктор с массивом данных
+    Matrix(int l, int c, int* B) : lines(l), columns(c) {
+        A = new T* [lines];
+        for (int i = 0; i < lines; ++i) {
+            A[i] = new T[columns];
+            for (int j = 0; j < columns; ++j) {
+                A[i][j] = B[i * columns + j];
+            }
+        }
+    }
+
+    // Деструктор
+    ~Matrix() {
+        if (A) {
+            for (int i = 0; i < lines; ++i) {
+                delete[] A[i];
+            }
+            delete[] A;
+        }
+    }
+
+    // Конструктор копирования
+    Matrix(const Matrix& other) : lines(other.lines), columns(other.columns) {
+        A = new T* [lines];
+        for (int i = 0; i < lines; ++i) {
+            A[i] = new T[columns];
+            for (int j = 0; j < columns; ++j) {
+                A[i][j] = other.A[i][j];
+            }
+        }
+    }
+
+    // Оператор присваивания
+    Matrix& operator=(const Matrix& other) {
+        if (this != &other) {
+            // Освобождаем старую память
+            if (A) {
+                for (int i = 0; i < lines; ++i) {
+                    delete[] A[i];
+                }
+                delete[] A;
+            }
+
+            // Копируем данные
+            lines = other.lines;
+            columns = other.columns;
+            A = new T* [lines];
+            for (int i = 0; i < lines; ++i) {
+                A[i] = new T[columns];
+                for (int j = 0; j < columns; ++j) {
+                    A[i][j] = other.A[i][j];
+                }
+            }
+        }
+        return *this;
+    }
+
+    T& operator()(int i, int j) {
+        return A[i][j];
+    }
+
+    const T& operator()(int i, int j) const {
+        return A[i][j];
+    }
+
+    //Функции возваращения размеров матрицы
+    int getLines() const { return lines; }
+    int getColumns() const { return columns; }
+
+    // Перегрузка оператора >>
+    friend istream& operator>>(istream& in, Matrix& matrix) {
+        cout << "Введите количество строк: ";
+        in >> matrix.lines;
+        cout << "Введите количество столбцов: ";
+        in >> matrix.columns;
+
+        // Освобождаем старую память, если есть
+        if (matrix.A) {
+            for (int i = 0; i < matrix.lines; ++i) {
+                delete[] matrix.A[i];
+            }
+            delete[] matrix.A;
+        }
+
+        // Выделяем новую память
+        matrix.A = new T* [matrix.lines];
+        for (int i = 0; i < matrix.lines; ++i) {
+            matrix.A[i] = new T[matrix.columns];
+            for (int j = 0; j < matrix.columns; ++j) {
+                cout << "Введите элемент [" << i << "][" << j << "]: ";
+                in >> matrix.A[i][j];
+            }
+        }
+        return in;
+    }
+
+    // Перегрузка оператора <<
+    friend ostream& operator<<(ostream& out, const Matrix& matrix) {
+        for (int i = 0; i < matrix.lines; ++i) {
+            for (int j = 0; j < matrix.columns; ++j) {
+                out << matrix.A[i][j] << " ";
+            }
+            out << "\n";
+        }
+        return out;
+    }
+
+    // Перегрузка на оператор *, чтобы реализовать умножение матриц
+    Matrix operator*(const Matrix& other) const {
+        if (columns != other.lines) {
+            throw std::invalid_argument("Размеры матриц не соответствуют для умножения!");
+        }
+
+        Matrix result(lines, other.columns); // Создаем матрицу для результата
+
+        for (int i = 0; i < lines; ++i) {
+            for (int j = 0; j < other.columns; ++j) {
+                result.A[i][j] = 0; // Инициализируем элемент нулем
+                for (int k = 0; k < columns; ++k) {
+                    result.A[i][j] += A[i][k] * other.A[k][j];
+                }
+            }
+        }
+
+        return result; // Возвращаем новую матрицу (результат)
+    }
+
+    // Перегрузка на оператор *=, чтобы реализовать умножение матриц
+    Matrix& operator*=(const Matrix& other) {
+        *this = *this * other;
+        return *this;
+    }
+
+    // Перегрузка на оператор +, чтобы реализовать сложение матриц
+    Matrix operator+(const Matrix& other) const {
+        if (lines != other.lines || columns != other.columns) {
+            throw std::invalid_argument("Размеры матриц не совпадают!");
+        }
+
+        Matrix result(lines, columns);
+
+        for (int i = 0; i < lines; ++i) {
+            for (int j = 0; j < columns; ++j) {
+                result.A[i][j] = A[i][j] + other.A[i][j];
+            }
+        }
+
+        return result;
+    }
+
+    // Перегрузка на оператор +=, чтобы реализовать сложение матриц
+    Matrix& operator+=(const Matrix& other) {
+        if (lines != other.lines || columns != other.columns) {
+            throw std::invalid_argument("Размеры матриц не совпадают!");
+        }
+
+        for (int i = 0; i < lines; ++i) {
+            for (int j = 0; j < columns; ++j) {
+                A[i][j] += other.A[i][j];
+            }
+        }
+
+        return *this;
+    }
+
+    void zadat_razmer() {
+        cout << "Пункт 1 (задание размера матрицы)" << endl;
+        cout << "Введи количество строк матрицы" << endl;
+        cin >> lines;
+        cout << "Введи количество столбцов матрицы" << endl;
+        cin >> columns;
+
+        // Освобождаем старую память, если есть
+        if (A) {
+            for (int i = 0; i < lines; ++i) {
+                delete[] A[i];
+            }
+            delete[] A;
+        }
+
+        // Выделяем новую память
+        A = new T* [lines];
+        for (int i = 0; i < lines; ++i) {
+            A[i] = new T[columns];
+            for (int j = 0; j < columns; ++j) {
+                A[i][j] = 0;
+            }
+        }
+        cout << "Вот нулевая матрица твоих размеров, а именно " << lines << " на " << columns << endl;
+    }
+};
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+
+    // Пункт 1 (задание размера матрицы)
+    cout << "Пункт 1 (задание размера матрицы)" << endl;
+    Matrix<int> intMatrix;
+    cout << "Введите матрицу:\n";
+    cin >> intMatrix;
+    cout << "Вы ввели матрицу:\n";
+    cout << intMatrix;
+    cout << "\n";
+
+    //Пункт 2 (узнать размер матрицы)
+    cout << "Пункт 2 (узнать размер матрицы)" << endl;
+    cout << "Вот размеры матрицы, которую вы создали выше:" << intMatrix.getLines() << " строк и " << intMatrix.getColumns() << " столцов" << endl;
+    cout << "\n";
+
+    // Пункт 3 (задание элемента матрицы по его индексам)
+    cout << "Пункт 3 (задание элемента матрицы по его индексам)" << endl;
+    int a[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    Matrix<int> intMatrix2(2, 5, a);
+    cout << "Вот моя матрица:" << endl;
+    cout << intMatrix2;
+    cout << "Я хочу поменять элемент матрицы с индексом (1,1) на 0" << endl;
+    intMatrix2(1, 1) = 0;
+    cout << "Вот моя новая матрица:" << endl;
+    cout << intMatrix2;
+    cout << "\n";
+
+    // Пункт 4 (узнать элемент матрицы по его индексам)
+    cout << "Пункт 4 (узнать элемент матрицы по его индексам)" << endl;
+    int b[] = { 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.1 };
+    Matrix<double> doubleMatrix3(2, 5, b);
+    cout << "Вот матрица, которую я придумал:" << endl;
+    cout << doubleMatrix3;
+    cout << "Я хочу узнать, значение элемента, который в этой матрице имеет индекс (0,0)" << endl;
+    cout << "Вот элемент моей матрицы, у которого индекс (0,0) - " << doubleMatrix3(0, 0) << endl;
+    cout << "\n";
+
+    // Пункт 5 (Вычисление произведение двух матриц одного размера)
+    cout << "Пункт 5 (Вычисление произведение двух матриц одного размера)" << endl;
+    int c[] = { 1,2,3,4,5,6,7,8,9 };
+    int d[] = { 9,8,7,6,5,4,3,2,1 };
+    Matrix<int> intMatrixA(3, 3, c);
+    cout << "Матрица A: " << endl;
+    cout << intMatrixA;
+    Matrix<int> intMatrixB(3, 3, d);
+    cout << "Матрица B: " << endl;
+    cout << intMatrixB;
+    cout << "Введи 1, если хочешь использовать '*' и введи 2, если хочешь использовать '*=' " << endl;
+    int s;
+    cin >> s;
+    Matrix<int> intMatrixC;
+    switch (s) {
+    case 1:
+        intMatrixC= intMatrixA * intMatrixB;
+        cout << "Матрица C, которая равна A * B: " << endl;
+        cout << intMatrixC;
+        break;
+    case 2:
+        intMatrixA *= intMatrixB;
+        cout << "Матрица A после A *= B: " << endl;
+        cout << intMatrixA;
+        break;
+    }
+    cout << "\n";
+
+    // Пункт 6 (Вычисление суммы двух матриц одного размера)
+    cout << "Пункт 6 (Вычисление суммы двух матриц одного размера)" << endl;
+    int z[] = { 1,2,3,4,5,6,7,8,9 };
+    int r[] = { 9,8,7,6,5,4,3,2,1 };
+    Matrix<int> intMatrixZ(3, 3, z);
+    cout << "Матрица Z: " << endl;
+    cout << intMatrixZ;
+    Matrix<int> intMatrixR(3, 3, r);
+    cout << "Матрица R: " << endl;
+    cout << intMatrixR;
+    cout << "Введи 1, если хочешь использовать '+' и введи 2, если хочешь использовать '+=' " << endl;
+    int x;
+    cin >> x;
+    Matrix<int> intMatrixW;
+    switch (x) {
+    case 1:
+        intMatrixW = intMatrixZ + intMatrixR;
+        cout << "Матрица W, которая равна Z + R: " << endl;
+        cout << intMatrixW;
+        break;
+    case 2:
+        intMatrixZ += intMatrixR;
+        cout << "Матрица Z после Z += R: " << endl;
+        cout << intMatrixZ;
+        break;
+    }
+    cout << "\n";
+
+    return 0;
+}
