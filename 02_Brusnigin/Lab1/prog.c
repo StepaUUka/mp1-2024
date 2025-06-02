@@ -199,7 +199,7 @@ void selection_sort(int Array[], int Sorted[], int len, int swaps[], double time
 }
 
 
-void quick_sort(int Array[], int Sorted[], int first_iter, int left, int right, int swaps[], double times[]){
+void quick_sort(int Array[], int Sorted[], int first_iter, int left, int right, int swaps[]){
 	if (first_iter == 1){
 		copy_array(Array, Sorted, right);
 		first_iter = 0;
@@ -214,11 +214,6 @@ void quick_sort(int Array[], int Sorted[], int first_iter, int left, int right, 
 	i = left;
 	j = right;
 	
-
-	double start_t, finish_t;
-	
-	start_t = PortableGetTime();
-
 	while (i <= j) {
 		while (Sorted[i] < val) { 
 			i++; 
@@ -236,16 +231,39 @@ void quick_sort(int Array[], int Sorted[], int first_iter, int left, int right, 
 	}
 
 	if (j > left) 
-		quick_sort(Array, Sorted, first_iter, left, j, swaps, times);
+		quick_sort(Array, Sorted, first_iter, left, j, swaps);
 	
 	if (i < right) 
-		quick_sort(Array, Sorted, first_iter, i, right, swaps, times);
+		quick_sort(Array, Sorted, first_iter, i, right, swaps);
 
-
-	finish_t = PortableGetTime();
-
-	times[4] = finish_t - start_t;
 	swaps[4] = swaps_counter;
+}
+
+
+int find_max(int Array[], int len)
+{
+	int max=Array[0], i;
+	for (i = 0; i < len; i++)
+	{
+		if (Array[i] > max)
+		{
+			max = Array[i];
+		}
+	}
+	return (max);
+}
+
+int find_min(int Array[], int len){
+	int min = Array[0], i;
+
+	for (i = 0; i < len; i++)
+	{
+		if (Array[i] < min)
+		{
+			min = Array[i];
+		}
+	}
+	return (min);
 }
 
 
@@ -255,25 +273,39 @@ void counting_sort(int Array[], int Sorted[], int len, int swaps[], double times
 	int k = 0;
 	int swaps_counter = 0;
 
-	int S[10000] = {0};
+	int S[20000] = {0};
 	
 	int i, j;
+
+	int max, min, abs;
 	
 	double start_t, finish_t;
 	
 	start_t = PortableGetTime();
+	
+	min = find_min(Array, len);
+	max = find_max(Array, len);
+
+	if (max < 0)
+		max = max * (-1);
+	if (min < 0)
+		min = min * (-1);
+	if (max > min)
+		abs = max; 
+	else 
+		abs = min;
 
 	for (i = 0; i < len; i++){
-		S[Sorted[i]+5000]++; 
+		S[Sorted[i]+abs]++; 
 		swaps_counter++;
 	}
 
 	k = 0; 
 	swaps_counter++;
 
-	for (int i = 0; i <= 10000; i++){
-		for (int j = 0; j < S[i]; j++){
-			Sorted[k] = i - 5000;
+	for (i = 0; i <= len; i++){
+		for (j = 0; j <= S[i]; j++){
+			Sorted[k] = i - abs;
 			k++; 
 			swaps_counter += 2;
 		}
@@ -342,7 +374,7 @@ void binary_search(int Sorted[], int len){
 
 
 void generate_array(int Array[], int Sorted[], int* len, int swaps[], double times[]){  // сгенерировать массив
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 5; i++)
 		swaps[i] = 0;
 
 	int k;
@@ -380,7 +412,7 @@ void generate_array(int Array[], int Sorted[], int* len, int swaps[], double tim
 
 
 void input_array(int Array[], int Sorted[], int* len, int swaps[], double times[]){  // ввод массива
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 5; i++)
 		swaps[i] = 0;
 
 	int k;
@@ -551,6 +583,8 @@ void print_menu(int Array[], int Sorted[], int len, int swaps[], double times[])
 
 
 void do_action(int Array[], int Sorted[], int* len, char* exit_checker, int swaps[], double times[]) {  // выполнение действия
+	double quick_time1, quick_time2;
+
 	int action;
 	
 	printf("\nYour action: ");
@@ -625,7 +659,10 @@ void do_action(int Array[], int Sorted[], int* len, char* exit_checker, int swap
 
 				case 7:
 					printf("\033[0d\033[2J");
-					quick_sort(Array, Sorted, 1, 0, *len, swaps, times);
+					quick_time1 = PortableGetTime();
+					quick_sort(Array, Sorted, 1, 0, *len, swaps);
+					quick_time2 = PortableGetTime();
+					times[4] = quick_time2 - quick_time1;
 					break;
 
 				case 8:
@@ -684,7 +721,10 @@ void do_action(int Array[], int Sorted[], int* len, char* exit_checker, int swap
 
 				case 7:
 					printf("\033[0d\033[2J");
-					quick_sort(Array, Sorted, 1, 0, *len, swaps, times);
+					quick_time1 = PortableGetTime();
+					quick_sort(Array, Sorted, 1, 0, *len, swaps);
+					quick_time2 = PortableGetTime();
+					times[4] = quick_time2 - quick_time1;
 					break;
 
 				case 8:
