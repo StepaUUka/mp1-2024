@@ -1,0 +1,252 @@
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <iomanip>
+#include <functional>
+
+#define _USE_MATH_DEFINES
+
+using namespace std;
+
+// Базовый класс Функция
+class Function {
+protected:
+    string name;
+public:
+    Function(const string& name) : name(name) {}
+    virtual ~Function() = default;
+
+    string getName() const { return name; }
+
+    // Виртуальные методы
+    virtual double evaluate(double x) const = 0;
+    virtual double first(double x) const = 0;
+    virtual double next(double x, int n) const = 0;
+    virtual double derivative(double x) const = 0;
+
+    // Вычисление ряда Тейлора
+    virtual double taylorSeries(double x, double eps, int maxTerms = 1000) const {
+        double sum = first(x);
+        double term = sum;
+
+        for (int n = 2; n < maxTerms; n++) {
+            term *= next(x, n);
+            sum += term;
+
+            if (abs(term) < eps) {
+                break;
+            }
+        }
+
+        return sum;
+    }
+
+    // Вычисление значений на отрезке
+    vector<double> evaluateOnInterval(double a, double b, double step) const {
+        vector<double> results;
+        for (double x = a; x <= b; x += step) {
+            results.push_back(evaluate(x));
+        }
+        return results;
+    }
+};
+
+// Производный класс - Синус
+class SinFunction : public Function {
+public:
+    SinFunction() : Function("sin(x)") {}
+
+    double evaluate(double x) const override {
+        return sin(x);
+    }
+
+    double first(double x) const override {
+        return x;
+    }
+
+    double next(double x, int n) const override {
+        return -x * x / ((2 * n - 1) * (2 * n - 2));
+    }
+
+    double derivative(double x) const override {
+        return cos(x);
+    }
+};
+
+// Производный класс - Косинус
+class CosFunction : public Function {
+public:
+    CosFunction() : Function("cos(x)") {}
+
+    double evaluate(double x) const override {
+        return cos(x);
+    }
+
+    double first(double x) const override {
+        return 1.0;
+    }
+
+    double next(double x, int n) const override {
+        return -x * x / ((2 * n - 1) * (2 * n - 2));
+    }
+
+    double derivative(double x) const override {
+        return -sin(x);
+    }
+};
+
+// Производный класс - Экспонента
+class ExpFunction : public Function {
+public:
+    ExpFunction() : Function("exp(x)") {}
+
+    double evaluate(double x) const override {
+        return exp(x);
+    }
+
+    double first(double x) const override {
+        return 1.0;
+    }
+
+    double next(double x, int n) const override {
+        return x / (n - 1);
+    }
+
+    double derivative(double x) const override {
+        return exp(x);
+    }
+};
+
+// Производный класс - Гиперболический синус
+class SinhFunction : public Function {
+public:
+    SinhFunction() : Function("sinh(x)") {}
+
+    double evaluate(double x) const override {
+        return sinh(x);
+    }
+
+    double first(double x) const override {
+        return x;
+    }
+
+    double next(double x, int n) const override {
+        return x * x / ((2 * n - 1) * (2 * n - 2));
+    }
+
+    double derivative(double x) const override {
+        return cosh(x);
+    }
+};
+
+// Класс-обработчик
+class Processor {
+private:
+    const Function* function;
+
+public:
+    Processor(const Function* func) : function(func) {}
+
+    // Вычисление ряда Тейлора
+    double Taylor(double x, double eps) const {
+        return function->taylorSeries(x, eps);
+    }
+
+    // Вывод значений на отрезке
+    void printOnInterval(double a, double b, double step) const {
+        cout << "Функция " << function->getName() << " на отрезке ["
+            << a << ", " << b << "] с шагом " << step << ":\n";
+
+        auto values = function->evaluateOnInterval(a, b, step);
+        for (size_t i = 0; i < values.size(); ++i) {
+            double x = a + i * step;
+            cout << fixed << setprecision(6)
+                << "f(" << x << ") = " << values[i] << endl;
+        }
+    }
+
+    // Вычисление интеграла методом прямоугольников
+    double Integral(double a, double b, int n = 1000) const {
+        double h = (b - a) / n;
+        double sum = 0.0;
+
+        for (int i = 0; i < n; ++i) {
+            double x = a + (i + 0.5) * h;
+            sum += function->evaluate(x);
+        }
+
+        return sum * h;
+    }
+};
+
+// Функция для вывода меню
+void printMenu() {
+    cout << "Выберите функцию:\n";
+    cout << "1. sin(x)\n";
+    cout << "2. cos(x)\n";
+    cout << "3. exp(x)\n";
+    cout << "4. sinh(x)\n";
+    cout << "0. Выход\n";
+}
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+
+    SinFunction sinFunc;
+    CosFunction cosFunc;
+    ExpFunction expFunc;
+    SinhFunction sinhFunc;
+    const Function* functions[] = { &sinFunc, &cosFunc, &expFunc, &sinhFunc };
+    int choice;
+    double x, eps;
+    double a, b, step;
+    while (true) {
+        printMenu();
+        cout << "Ваш выбор: ";
+        cin >> choice;
+
+        if (choice == 0) break;
+        if (choice < 1 || choice > 4) {
+            cout << "Неверный выбор!\n";
+            continue;
+        }
+        const Function* selectedFunc = functions[choice - 1];
+        Processor processor(selectedFunc);
+
+        cout << "\nВыбрана функция: " << selectedFunc->getName() << endl;
+
+        // Ввод точки для вычисления ряда Тейлора
+        cout << "Введите точку x: ";
+        cin >> x;
+        cout << "Введите точность eps: ";
+        cin >> eps;
+
+        // Вычисление и вывод ряда Тейлора
+        double taylorValue = processor.Taylor(x, eps);
+        double exactValue = selectedFunc->evaluate(x);
+
+        cout << "\nРезультаты:\n";
+        cout << "Ряд Тейлора: " << taylorValue << endl;
+        cout << "Точное значение: " << exactValue << endl;
+        cout << "Разница: " << abs(taylorValue - exactValue) << endl;
+
+        // Ввод параметров для отрезка
+        cout << "\nВведите отрезок [a, b] и шаг:\n";
+        cout << "a = ";
+        cin >> a;
+        cout << "b = ";
+        cin >> b;
+        cout << "step = ";
+        cin >> step;
+
+        // Вывод значений на отрезке
+        processor.printOnInterval(a, b, step);
+
+        // Вычисление интеграла
+        cout << "\nВычисление интеграла на отрезке [" << a << ", " << b << "]:\n";
+        double integral = processor.Integral(a, b);
+        cout << "Значение интеграла: " << integral << endl;
+    }
+
+    return 0;
+}
